@@ -1,4 +1,3 @@
-```markdown
 # Contexter
 
 Contexter is a powerful suite of Python command-line tools for packaging, 
