@@ -30,3 +30,23 @@ We've added a `sanitizecontext` command to fix common formatting errors when you
 | `html2md`           | A utility to convert any HTML file to Markdown.                          |
 
 For detailed usage, run any command with the `-h` or `--help` flag.
+
+## Installation
+
+You can install Contexter using `pip`. It is recommended to install it in a virtual environment.
+
+### Standard Installation
+
+```bash
+pip install .
+```
+
+### Development Installation
+
+If you want to edit the source code and have your changes immediately reflected, use the "editable" install mode:
+
+```bash
+pip install -e .
+```
+
+This will install the necessary dependencies from `requirements.txt` and create command-line entries for the Contexter tools.

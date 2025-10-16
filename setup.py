@@ -17,8 +17,8 @@ setup(
    description='A suite of tools to package, reconstruct, and update software projects as single text-based context files.',
    long_description=long_description,
    long_description_content_type='text/markdown',
-   author='Your Name',
-   author_email='you@example.com',
+   author='ray0404',
+   author_email='ray.valentin.04@gmail.com',
    url='[https://github.com/your-username/contexter](https://github.com/your-username/contexter)',
    py_modules=[
        'contexter_utils',
