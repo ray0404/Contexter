@@ -1,0 +1,28 @@
+```plaintext
+Metadata-Version: 2.4
+Name: contexter
+Version: 2.0.0
+Summary: A suite of tools to package, reconstruct, and update software projects as single text-based context files (MD or HTML).
+Home-page: https://github.com/your-username/contexter
+Author: Your Name
+Author-email: Your Name <you@example.com>
+Project-URL: Homepage, https://github.com/your-username/contexter
+Project-URL: Bug Tracker, https://github.com/your-username/contexter/issues
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Topic :: Software Development :: Build Tools
+Classifier: Topic :: Utilities
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+Requires-Dist: markdown
+Requires-Dist: Pygments
+Requires-Dist: markdownify
+Requires-Dist: beautifulsoup4
+Requires-Dist: patch
+Dynamic: author
+Dynamic: home-page
+Dynamic: requires-python
+
+
+```markdown
