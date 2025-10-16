@@ -1,11 +1,17 @@
 ```markdown
 # Contexter
 
-Contexter is a powerful suite of Python command-line tools for packaging, reconstructing, and updating software projects as single, portable Markdown or HTML files. This workflow is perfect for sharing entire projects with AI models, creating simple text-based backups, or transferring projects between machines.
+Contexter is a powerful suite of Python command-line tools for packaging, 
+reconstructing, and updating software projects as single, portable Markdown or 
+HTML files. This workflow is perfect for sharing entire projects with AI 
+models, creating simple text-based backups, or transferring projects between 
+machines.
 
 ## New in This Version: AI Workflow ✅
 
-We've added a `sanitizecontext` command to fix common formatting errors when you copy a full project context from an AI chat. Since AI models can sometimes forget to add code fences (````), this tool makes the output instantly usable.
+We've added a `sanitizecontext` command to fix common formatting errors when 
+you copy a full project context from an AI chat. Since AI models can sometimes 
+forget to add code fences (````), this tool makes the output instantly usable.
 
 **New Workflow:**
 1.  Paste the AI's response into `ai_output.md`.
@@ -33,7 +39,8 @@ For detailed usage, run any command with the `-h` or `--help` flag.
 
 ## Installation
 
-You can install Contexter using `pip`. It is recommended to install it in a virtual environment.
+You can install Contexter using `pip`. It is recommended to install it in a 
+virtual environment.
 
 ### Standard Installation
 
@@ -43,10 +50,12 @@ pip install .
 
 ### Development Installation
 
-If you want to edit the source code and have your changes immediately reflected, use the "editable" install mode:
+If you want to edit the source code and have your changes immediately 
+reflected, use the "editable" install mode:
 
 ```bash
 pip install -e .
 ```
 
-This will install the necessary dependencies from `requirements.txt` and create command-line entries for the Contexter tools.
+This will install the necessary dependencies from `requirements.txt` and 
+create command-line entries for the Contexter tools.
