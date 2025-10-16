@@ -1,0 +1,46 @@
+# pyproject.toml
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "contexter"
+version = "4.0.0"
+authors = [
+ { name="Your Name", email="you@example.com" },
+]
+description = "A suite of tools to package, reconstruct, and update software projects as single text-based context files (MD or HTML)."
+readme = "README.md"
+requires-python = ">=3.7"
+classifiers = [
+   "Programming Language :: Python :: 3",
+   "License :: OSI Approved :: MIT License",
+   "Operating System :: OS Independent",
+   "Topic :: Software Development :: Build Tools",
+   "Topic :: Utilities",
+]
+dependencies = [
+   "markdown",
+   "Pygments",
+   "markdownify",
+   "beautifulsoup4",
+   "patch",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/your-username/contexter"
+"Bug Tracker" = "https://github.com/your-username/contexter/issues"
+
+[project.scripts]
+build_context_html = "build_context_html:main"
+context_builder = "context_builder:main"
+html2md = "html2md:main"
+md2html = "md2html:main"
+reconstructor = "reconstructor:main"
+reconstructor_html = "reconstructor_html:main"
+sanitize_context = "sanitize_context:main"
+smart_update = "smart_update:main"
+update_context = "update_context:main"
+update_context_html = "update_context_html:main"
+updater = "updater:main"
+updater_html = "updater_html:main"

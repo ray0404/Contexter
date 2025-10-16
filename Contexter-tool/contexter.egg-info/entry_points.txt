@@ -1,0 +1,13 @@
+[console_scripts]
+build_context_html = build_context_html:main
+context_builder = context_builder:main
+html2md = html2md:main
+md2html = md2html:main
+reconstructor = reconstructor:main
+reconstructor_html = reconstructor_html:main
+sanitize_context = sanitize_context:main
+smart_update = smart_update:main
+update_context = update_context:main
+update_context_html = update_context_html:main
+updater = updater:main
+updater_html = updater_html:main

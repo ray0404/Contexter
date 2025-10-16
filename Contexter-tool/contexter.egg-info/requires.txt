@@ -1,0 +1,5 @@
+markdown
+Pygments
+markdownify
+beautifulsoup4
+patch
