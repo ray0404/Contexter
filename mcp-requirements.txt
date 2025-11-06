@@ -1,0 +1,4 @@
+fastmcp
+pydantic
+markdown2
+html2text
