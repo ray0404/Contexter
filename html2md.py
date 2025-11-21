@@ -1,4 +1,3 @@
-```python
 #!/usr/bin/env python3
 import argparse
 from markdownify import markdownify as md

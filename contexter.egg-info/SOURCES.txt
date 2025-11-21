@@ -1,4 +1,3 @@
-```plaintext
 README.md
 build_context_html.py
 context_builder.py
@@ -8,6 +7,7 @@ md2html.py
 pyproject.toml
 reconstructor.py
 reconstructor_html.py
+sanitize_context.py
 setup.py
 smart_update.py
 update_context.py
