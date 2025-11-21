@@ -38,23 +38,54 @@ For detailed usage, run any command with the `-h` or `--help` flag.
 
 ## Installation
 
-You can install Contexter using `pip`. It is recommended to install it in a 
-virtual environment.
+To get started with Contexter, follow these steps:
 
-### Standard Installation
+### 1. Clone the Repository
+
+First, clone the Contexter repository from GitHub:
+
+```bash
+git clone -b cli https://github.com/ray0404/Contexter.git
+cd Contexter
+```
+
+### 2. (Optional but Recommended) Set up a Python Virtual Environment
+
+It is highly recommended to install Contexter in a virtual environment to avoid conflicts with your system's Python packages.
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+
+### 3. Install Contexter
+
+You can install Contexter using `pip`.
+
+#### Standard Installation
+
+If you just want to use Contexter:
 
 ```bash
 pip install .
 ```
 
-### Development Installation
+#### Development Installation
 
-If you want to edit the source code and have your changes immediately 
-reflected, use the "editable" install mode:
+If you plan to contribute to Contexter or want your changes to the source code immediately reflected:
 
 ```bash
 pip install -e .
 ```
 
-This will install the necessary dependencies from `requirements.txt` and 
-create command-line entries for the Contexter tools.
+This will install the necessary dependencies from `requirements.txt` and create command-line entries for the Contexter tools.
+
+### 4. (Optional) Create Aliases Workaround
+
+Some environments may not correctly set up the command-line entry points. If you encounter issues running `buildcontext`, `reconstructor`, etc., you can use the `create_aliases.py` script as a workaround:
+
+```bash
+python3 create_aliases.py
+source ~/.bashrc # or ~/.zshrc, depending on your shell
+```
+This script creates shell aliases for each Contexter command, making them accessible directly from your terminal.
