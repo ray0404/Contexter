@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+firebase-debug.log
+GEMINI.md
+*.egg-info/

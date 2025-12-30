@@ -1,4 +1,3 @@
-```plaintext
 markdown
 Pygments
 markdownify

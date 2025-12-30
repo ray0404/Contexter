@@ -1,4 +1,3 @@
-```python
 # contexter_utils.py
 """
 Central utility module for the Contexter tool suite.
