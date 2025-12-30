@@ -17,5 +17,6 @@ updater_html.py
 contexter.egg-info/PKG-INFO
 contexter.egg-info/SOURCES.txt
 contexter.egg-info/dependency_links.txt
+contexter.egg-info/entry_points.txt
 contexter.egg-info/requires.txt
 contexter.egg-info/top_level.txt

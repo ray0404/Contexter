@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "contexter"
-version = "2.0.0"
+version = "2.1.0"
 authors = [
  { name="ray0404", email="ray.valentin.04@gmail.com" },
 ]
@@ -30,3 +30,17 @@ dependencies = [
 [project.urls]
 "Homepage" = "https://github.com/your-username/contexter"
 "Bug Tracker" = "https://github.com/your-username/contexter/issues"
+
+[project.scripts]
+buildcontext = "context_builder:main"
+reconstructor = "reconstructor:main"
+updatecontext = "update_context:main"
+updater = "updater:main"
+smartupdate = "smart_update:main"
+sanitizecontext = "sanitize_context:main"
+md2html = "md2html:main"
+html2md = "html2md:main"
+buildcontexthtml = "build_context_html:main"
+reconstructorhtml = "reconstructor_html:main"
+updatecontexthtml = "update_context_html:main"
+updaterhtml = "updater_html:main"
