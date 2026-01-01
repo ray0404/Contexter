@@ -32,7 +32,8 @@ setup(
        'build_context_html',
        'reconstructor_html',
        'update_context_html',
-       'updater_html'
+       'updater_html',
+       'context_tracker'
    ],
    install_requires=requirements,
    entry_points={
@@ -48,7 +49,8 @@ setup(
            'buildcontexthtml=build_context_html:main',
            'reconstructorhtml=reconstructor_html:main',
            'updatecontexthtml=update_context_html:main',
-           'updaterhtml=updater_html:main'
+           'updaterhtml=updater_html:main',
+           'trackcontext=context_tracker:main'
        ],
    },
    classifiers=[
