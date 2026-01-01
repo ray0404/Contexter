@@ -45,6 +45,7 @@ This document serves as the authoritative guide for the **Google Jules Asynchron
 | `contexter_utils.py` | Shared Library | Contains `parse_md_constructor`, `generate_file_tree`, `is_binary`. |
 | `context_builder.py` | Packer | Generates the Markdown context. |
 | `reconstructor.py` | Unpacker | Parses Markdown and creates files/folders. |
+| `context_tracker.py` | VCS Tool | Manages snapshots and patches (commit/revert). |
 | `sanitize_context.py` | Repair Tool | Uses heuristics to fix broken AI output. |
 
 ### 2.2. Import Strategy

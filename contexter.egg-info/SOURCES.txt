@@ -1,6 +1,7 @@
 README.md
 build_context_html.py
 context_builder.py
+context_tracker.py
 contexter_utils.py
 html2md.py
 md2html.py
@@ -20,3 +21,7 @@ contexter.egg-info/dependency_links.txt
 contexter.egg-info/entry_points.txt
 contexter.egg-info/requires.txt
 contexter.egg-info/top_level.txt
+tests/test_context_tracker.py
+tests/test_integration.py
+tests/test_sanitization.py
+tests/test_utils.py
