@@ -3,3 +3,4 @@ __pycache__/
 firebase-debug.log
 GEMINI.md
 *.egg-info/
+blueprints/
