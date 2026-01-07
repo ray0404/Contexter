@@ -13,13 +13,87 @@ from pygments import highlight
 from pygments.lexers import get_lexer_by_name, guess_lexer, find_lexer_class_by_name
 from pygments.formatters import HtmlFormatter
 import re
+import re
 import html
+import ast
+import xml.etree.ElementTree as ET
 
 # --- Constants ---
 DEFAULT_EXCLUDE_PATTERNS = [
    ".git*", "node_modules", "__pycache__", "*.pyc", "*.pyo", "dist", "build",
    ".venv", "venv", "*.lock", ".DS_Store", "*.log", ".contexter_cache"
 ]
+
+# Basic secret patterns (heuristics)
+SECRET_PATTERNS = [
+    (r"AKIA[0-9A-Z]{16}", "AWS Access Key"),
+    (r"-----BEGIN RSA PRIVATE KEY-----", "RSA Private Key"),
+    (r"-----BEGIN OPENSSH PRIVATE KEY-----", "OpenSSH Private Key"),
+    (r"ghp_[0-9a-zA-Z]{36}", "GitHub Personal Access Token"),
+    (r"xox[baprs]-([0-9a-zA-Z]{10,48})", "Slack Token"),
+    (r"sk_live_[0-9a-zA-Z]{24}", "Stripe Live Key"),
+]
+
+# --- Analysis Utilities ---
+
+def estimate_token_count(text):
+    """Estimates token count using the char/4 heuristic."""
+    if not text:
+        return 0
+    return len(text) // 4
+
+def scan_for_secrets(content, file_path=""):
+    """Scans content for common secret patterns. Returns list of found warnings."""
+    warnings = []
+    for pattern, name in SECRET_PATTERNS:
+        if re.search(pattern, content):
+            warnings.append(f"Potential {name} found in {file_path}")
+    return warnings
+
+# --- Transformation Utilities ---
+
+def compress_code(content, file_path):
+    """
+    Compresses code by removing comments and docstrings.
+    Uses AST for Python, Regex for C-style languages (JS, C, Java, etc.).
+    """
+    ext = os.path.splitext(file_path)[1].lower()
+    
+    if ext == '.py':
+        try:
+            parsed = ast.parse(content)
+            # Remove docstrings: iterate and remove Expr nodes that are just Str
+            for node in ast.walk(parsed):
+                if not isinstance(node, (ast.FunctionDef, ast.ClassDef, ast.AsyncFunctionDef, ast.Module)):
+                    continue
+                if not len(node.body):
+                    continue
+                if isinstance(node.body[0], ast.Expr) and isinstance(node.body[0].value, (ast.Str, ast.Constant)):
+                    # Check if it is a docstring (Constant for Py3.8+)
+                    if isinstance(node.body[0].value, ast.Constant) and isinstance(node.body[0].value.value, str):
+                         node.body.pop(0)
+                    elif isinstance(node.body[0].value, ast.Str): # Legacy
+                         node.body.pop(0)
+            
+            # Unparse is available in Python 3.9+. For older versions, this is harder.
+            # Termux usually has recent Python.
+            if hasattr(ast, 'unparse'):
+                return ast.unparse(parsed)
+            else:
+                return content # Fallback if no unparse
+        except:
+            return content # Fallback on parse error
+
+    # C-style comments (// and /* */)
+    if ext in ['.js', '.ts', '.c', '.cpp', '.java', '.cs', '.go', '.rs', '.php', '.css', '.scss']:
+        # Remove single line comments
+        content = re.sub(r'//.*', '', content)
+        # Remove multi-line comments
+        content = re.sub(r'/\*.*?\*/', '', content, flags=re.DOTALL)
+        # Remove empty lines resulting from deletion
+        return "\n".join([line for line in content.splitlines() if line.strip()])
+
+    return content
 
 # --- File System Utilities ---
 
@@ -126,6 +200,35 @@ def parse_html_constructor(file_path):
        if path: files[path] = None
 
    return files
+
+def parse_xml_constructor(file_path):
+    """Parses an XML constructor file into a dictionary of {filepath: content_string or None for binary}."""
+    files = {}
+    try:
+        tree = ET.parse(file_path)
+        root = tree.getroot()
+        
+        # Expecting structure: <root><files><file path="...">content</file></files></root>
+        # or flattened <root><file path="...">content</file></root> depending on implementation.
+        # We will search for all 'file' tags to be robust.
+        
+        for file_elem in root.findall('.//file'):
+            path = file_elem.get('path')
+            if not path:
+                continue
+            
+            is_binary_attr = file_elem.get('is_binary')
+            if is_binary_attr and is_binary_attr.lower() == 'true':
+                files[path] = None
+            else:
+                files[path] = file_elem.text if file_elem.text else ""
+                
+    except ET.ParseError:
+        return None
+    except FileNotFoundError:
+        return None
+        
+    return files
 
 def parse_patch_file(patch_file_path):
    """Auto-detects and parses a patch file (MD or HTML) into a patch dictionary."""
