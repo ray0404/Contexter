@@ -197,16 +197,22 @@ def rebuild_html_constructor(output_path, files_dict, tree_content=None):
        html_parts.append(f'<h2><span class="path">DIRECTORY STRUCTURE</span></h2>')
        html_parts.append(f'<div class="highlight"><pre>{html.escape(tree_content)}</pre></div></div>')
 
+   lexer_cache = {}
+   formatter = HtmlFormatter(linenos=True, cssclass="highlight")
+
    for path, content in sorted(files_dict.items()):
        if content is None:
            html_parts.append(f'<div class="skipped-container" data-path="{path}"><h3>SKIPPED (BINARY): <span class="path">{path}</span></h3></div>')
        else:
            lang = get_language_from_path(path)
-           try:
-               lexer = get_lexer_by_name(lang, stripall=True)
-           except:
-               lexer = guess_lexer(content)
-           formatter = HtmlFormatter(linenos=True, cssclass="highlight")
+           lexer = lexer_cache.get(lang)
+           if not lexer:
+               try:
+                   lexer = get_lexer_by_name(lang, stripall=True)
+                   lexer_cache[lang] = lexer
+               except:
+                   lexer = guess_lexer(content)
+
            highlighted_code = highlight(content, lexer, formatter)
            html_parts.append(f'<div class="file-container" data-path="{path}"><h2>FILE: <span class="path">{path}</span></h2>{highlighted_code}</div>')
    
