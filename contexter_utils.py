@@ -115,15 +115,15 @@ def parse_html_constructor(file_path):
            soup = BeautifulSoup(f, 'html.parser')
    except FileNotFoundError: return None
    
-   for container in soup.find_all('div', class_='file-container'):
+   for container in soup.find_all('div', class_=['file-container', 'skipped-container']):
        path = container.get('data-path')
        if path:
-           code_block = container.find('div', class_='highlight')
-           if code_block: files[path] = code_block.get_text()
-
-   for container in soup.find_all('div', class_='skipped-container'):
-       path = container.get('data-path')
-       if path: files[path] = None
+           classes = container['class']
+           if 'skipped-container' in classes:
+               files[path] = None
+           else:
+               code_block = container.find('div', class_='highlight')
+               if code_block: files[path] = code_block.get_text()
 
    return files
 
