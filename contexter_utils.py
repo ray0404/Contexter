@@ -23,6 +23,23 @@ DEFAULT_EXCLUDE_PATTERNS = [
 
 # --- File System Utilities ---
 
+def get_matcher(patterns):
+   """
+   Compiles multiple glob patterns into a single regular expression for efficient matching.
+   This is significantly faster than calling fnmatch for each pattern.
+   """
+   if not patterns:
+       return lambda _: False
+
+   # Convert each pattern to a regex and join them
+   regex_parts = [fnmatch.translate(p) for p in patterns]
+   combined_regex = "|".join(regex_parts)
+
+   # Use re.IGNORECASE only on Windows to match standard fnmatch behavior
+   flags = re.IGNORECASE if os.name == 'nt' else 0
+   matcher = re.compile(combined_regex, flags)
+   return matcher.match
+
 def is_binary(file_path):
    """Checks if a file is binary using MIME types and a content heuristic."""
    mime_type, _ = mimetypes.guess_type(file_path)
@@ -40,12 +57,13 @@ def is_binary(file_path):
 def generate_file_tree(start_path, exclude_patterns):
    """Generates a string representation of the file tree."""
    tree_lines = []
+   matcher = get_matcher(exclude_patterns)
    # Normalize start_path to ensure consistent trailing slash behavior
    start_path = os.path.normpath(start_path)
    for root, dirs, files in os.walk(start_path, topdown=True):
        # Exclude directories and files based on patterns
-       dirs[:] = sorted([d for d in dirs if not any(fnmatch.fnmatch(d, p) for p in exclude_patterns)])
-       files = sorted([f for f in files if not any(fnmatch.fnmatch(f, p) for p in exclude_patterns)])
+       dirs[:] = sorted([d for d in dirs if not matcher(d)])
+       files = sorted([f for f in files if not matcher(f)])
 
        relative_root = os.path.relpath(root, start_path)
        if relative_root == ".":
