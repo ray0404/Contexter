@@ -48,16 +48,33 @@ def _get_ignore_patterns(src_path: Path, ignore_file_name: str, extra_ignores: L
 def _scan_directory(src_path: Path, ignore_patterns: List[str]) -> List[Path]:
     """Scans the directory and returns a list of all files that are NOT ignored."""
     included_files = []
+
+    if ignore_patterns:
+        # Optimization: Compile all ignore patterns into a single regex
+        # Use os.path.normcase to handle path separators appropriately across platforms
+        regexes = [fnmatch.translate(os.path.normcase(p)) for p in ignore_patterns]
+        combined_pattern = "(?:" + "|".join(regexes) + ")"
+
+        # Apply re.IGNORECASE on Windows to match fnmatch behavior
+        flags = re.IGNORECASE if os.name == 'nt' else 0
+        ignore_regex = re.compile(combined_pattern, flags)
+
+        def is_ignored(path_str: str) -> bool:
+            return ignore_regex.match(os.path.normcase(path_str)) is not None
+    else:
+        def is_ignored(path_str: str) -> bool:
+            return False
+
     for root, dirs, files in os.walk(src_path, topdown=True):
         current_path = Path(root)
         dirs[:] = [
             d for d in dirs 
-            if not any(fnmatch.fnmatch(current_path.joinpath(d).relative_to(src_path), p) for p in ignore_patterns)
+            if not is_ignored(str(current_path.joinpath(d).relative_to(src_path)))
         ]
         for file in files:
             file_path = current_path / file
             rel_path = file_path.relative_to(src_path)
-            if not any(fnmatch.fnmatch(rel_path, p) for p in ignore_patterns):
+            if not is_ignored(str(rel_path)):
                 included_files.append(file_path)
     return included_files
 
