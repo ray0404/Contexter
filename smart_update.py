@@ -8,6 +8,11 @@ import re
 
 from contexter_utils import DEFAULT_EXCLUDE_PATTERNS, get_language_from_path
 
+# Regex patterns for parsing rsync output, e.g., ">f.st......"
+# We only care about files (f), not directories, links, etc. for content diffing.
+RSYNC_CHANGE_PATTERN = re.compile(r"^(>f|hf)(\.|\+).*? (.*)$")
+RSYNC_DELETE_PATTERN = re.compile(r"^\*deleting   (.*)$")
+
 def check_rsync():
     """Check if rsync is available in the system's PATH."""
     if not shutil.which("rsync"):
@@ -31,20 +36,16 @@ def run_rsync(command):
 def parse_rsync_output(output, project_dir):
     """Parses the itemized output of rsync to categorize file changes."""
     changes = {'added': [], 'deleted': [], 'modified': []}
-    # Pattern to match rsync's itemized output format, e.g., ">f.st......"
-    # We only care about files (f), not directories, links, etc. for content diffing.
-    change_pattern = re.compile(r"^(>f|hf)(\.|\+).*? (.*)$")
-    delete_pattern = re.compile(r"^\*deleting   (.*)$")
 
     for line in output.splitlines():
-        delete_match = delete_pattern.match(line)
+        delete_match = RSYNC_DELETE_PATTERN.match(line)
         if delete_match:
             path = delete_match.group(1).strip()
             if not path.endswith('/'): # Ignore directories
                 changes['deleted'].append(os.path.join(project_dir, path))
             continue
 
-        change_match = change_pattern.match(line)
+        change_match = RSYNC_CHANGE_PATTERN.match(line)
         if change_match:
             change_type, change_flags, path_str = change_match.groups()
             path = os.path.join(project_dir, path_str.strip())
