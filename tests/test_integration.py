@@ -28,10 +28,15 @@ class TestIntegration(unittest.TestCase):
         os.chdir(self.test_dir)
         try:
             # 1. Build Context
+            # Set PYTHONPATH to the original directory so modules can be found
+            env = os.environ.copy()
+            env["PYTHONPATH"] = original_cwd + os.pathsep + env.get("PYTHONPATH", "")
+
             # Use relative path "source" instead of absolute path
             subprocess.check_call(
                 [sys.executable, "-m", "context_builder", "context.md", "source"],
-                stdout=subprocess.DEVNULL
+                stdout=subprocess.DEVNULL,
+                env=env
             )
             
             self.assertTrue(os.path.exists("context.md"))
@@ -39,7 +44,8 @@ class TestIntegration(unittest.TestCase):
             # 2. Reconstruct
             subprocess.check_call(
                 [sys.executable, "-m", "reconstructor", "context.md", "output"],
-                stdout=subprocess.DEVNULL
+                stdout=subprocess.DEVNULL,
+                env=env
             )
             
             # 3. Verify

@@ -1,14 +1,14 @@
 import unittest
 import os
 import sys
-from unittest.mock import MagicMock
+from unittest.mock import patch, MagicMock
 
-# Mock contexter_utils before importing smart_update
-mock_utils = MagicMock()
-sys.modules["contexter_utils"] = mock_utils
-mock_utils.DEFAULT_EXCLUDE_PATTERNS = []
+# We need to ensure contexter_utils is available for smart_update to import
+# but we don't want to permanently mock it in sys.modules at the module level.
 
-from smart_update import parse_rsync_output
+with patch('contexter_utils.DEFAULT_EXCLUDE_PATTERNS', []), \
+     patch('contexter_utils.get_language_from_path', MagicMock()):
+    from smart_update import parse_rsync_output
 
 class TestSmartUpdate(unittest.TestCase):
     def test_parse_rsync_output(self):

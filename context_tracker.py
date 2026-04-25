@@ -73,14 +73,14 @@ def cmd_commit(message):
     print(f"🚀 Starting commit: '{message}'")
     
     # Determine command to run
-    # Priority 1: Global 'smartupdate' command (installed)
-    # Priority 2: Local 'smart_update.py' script (dev environment)
+    # Priority 1: Local 'smart_update.py' script (dev environment / source root)
+    # Priority 2: Global 'smartupdate' command (installed)
     
     cmd_args = []
-    if shutil.which("smartupdate"):
-        cmd_args = ["smartupdate", ".", patch_path]
-    elif os.path.exists("smart_update.py"):
+    if os.path.exists("smart_update.py"):
         cmd_args = ["python3", "smart_update.py", ".", patch_path]
+    elif shutil.which("smartupdate"):
+        cmd_args = ["smartupdate", ".", patch_path]
     else:
         print(f"❌ Error: 'smartupdate' command not found and 'smart_update.py' not in current directory.")
         print("   Please install the package or run from source root.")
@@ -88,7 +88,9 @@ def cmd_commit(message):
 
     # Run smartupdate
     try:
-        result = subprocess.run(cmd_args, capture_output=True, text=True, check=True)
+        env = os.environ.copy()
+        env["PYTHONPATH"] = "." + os.pathsep + env.get("PYTHONPATH", "")
+        result = subprocess.run(cmd_args, capture_output=True, text=True, check=True, env=env)
         output = result.stdout.strip()
     except subprocess.CalledProcessError as e:
         # Check if it was just "No changes" (smartupdate logic might exit differently or print to stdout)
