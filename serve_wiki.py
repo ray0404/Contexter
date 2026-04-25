@@ -2,6 +2,7 @@ import http.server
 import socketserver
 import os
 import markdown
+import re
 from pygments.formatters import HtmlFormatter
 
 PORT = 8000
@@ -102,10 +103,17 @@ class WikiHandler(http.server.SimpleHTTPRequestHandler):
 
             with open(found_path, "r", encoding="utf-8") as f:
                 content = f.read()
-                # Post-processing to fix relative links if necessary?
-                # For now assume they are relative to root or handled by browser
                 html_content = markdown.markdown(content, extensions=['fenced_code', 'codehilite', 'tables'])
                 
+                # Post-processing to fix relative links
+                def fix_link(match):
+                    href = match.group(1)
+                    if not href.startswith(('http://', 'https://', 'mailto:', '#')):
+                        href = re.sub(r'\.md(#|$)', r'\1', href)
+                    return f'href="{href}"'
+
+                html_content = re.sub(r'href="([^"]+)"', fix_link, html_content)
+
             full_html = f"""
             <html>
             <head><title>{path}</title>{STYLE}</head>
