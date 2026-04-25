@@ -9,7 +9,7 @@ import sys
 from xml.sax.saxutils import escape
 from contexter_utils import (
    DEFAULT_EXCLUDE_PATTERNS, is_binary, generate_file_tree, get_language_from_path,
-   estimate_token_count, scan_for_secrets, compress_code
+   estimate_token_count, scan_for_secrets, compress_code, get_matcher
 )
 
 def fetch_remote_repo(remote_url, quiet=False):
@@ -45,13 +45,16 @@ def process_file_content(path, content, args):
         
     return content, warnings
 
-def process_path_for_xml(path, outfile, exclude_patterns, processed_files, args, stats, base_path=None):
+def process_path_for_xml(path, outfile, exclude_patterns, processed_files, args, stats, matcher=None, base_path=None):
    """Recursively processes a path and writes to the XML file."""
    norm_path = os.path.normpath(path)
    if norm_path in processed_files:
        return
    
    processed_files.add(norm_path)
+
+   if matcher is None:
+       matcher = get_matcher(exclude_patterns)
 
    if os.path.isdir(norm_path):
        if not args.quiet:
@@ -62,11 +65,11 @@ def process_path_for_xml(path, outfile, exclude_patterns, processed_files, args,
            outfile.write(f"  <directory_structure>\n{escape(tree)}\n  </directory_structure>\n")
 
        for root, dirs, files in os.walk(norm_path, topdown=True):
-           dirs[:] = sorted([d for d in dirs if not any(fnmatch.fnmatch(d, p) for p in exclude_patterns)])
-           files = sorted([f for f in files if not any(fnmatch.fnmatch(f, p) for p in exclude_patterns)])
+           dirs[:] = sorted([d for d in dirs if not matcher(d)])
+           files = sorted([f for f in files if not matcher(f)])
            for filename in files:
                file_path = os.path.join(root, filename)
-               process_path_for_xml(file_path, outfile, exclude_patterns, processed_files, args, stats, base_path)
+               process_path_for_xml(file_path, outfile, exclude_patterns, processed_files, args, stats, matcher, base_path)
 
    elif os.path.isfile(norm_path):
        display_path = os.path.relpath(norm_path, base_path) if base_path else norm_path
@@ -92,13 +95,16 @@ def process_path_for_xml(path, outfile, exclude_patterns, processed_files, args,
        except Exception as e:
            print(f"❌ Error reading file {norm_path}: {e}", file=sys.stderr)
 
-def process_path_for_md(path, outfile, exclude_patterns, processed_files, args, stats, base_path=None):
+def process_path_for_md(path, outfile, exclude_patterns, processed_files, args, stats, matcher=None, base_path=None):
    """Recursively processes a path and writes to the MD file, avoiding duplicates."""
    norm_path = os.path.normpath(path)
    if norm_path in processed_files:
        return
    
    processed_files.add(norm_path)
+
+   if matcher is None:
+       matcher = get_matcher(exclude_patterns)
 
    if os.path.isdir(norm_path):
        if not args.quiet:
@@ -109,11 +115,11 @@ def process_path_for_md(path, outfile, exclude_patterns, processed_files, args, 
            outfile.write(f"--- DIRECTORY STRUCTURE: {os.path.basename(norm_path)} ---\n\n````\n{tree}\n````\n\n")
 
        for root, dirs, files in os.walk(norm_path, topdown=True):
-           dirs[:] = sorted([d for d in dirs if not any(fnmatch.fnmatch(d, p) for p in exclude_patterns)])
-           files = sorted([f for f in files if not any(fnmatch.fnmatch(f, p) for p in exclude_patterns)])
+           dirs[:] = sorted([d for d in dirs if not matcher(d)])
+           files = sorted([f for f in files if not matcher(f)])
            for filename in files:
                file_path = os.path.join(root, filename)
-               process_path_for_md(file_path, outfile, exclude_patterns, processed_files, args, stats, base_path)
+               process_path_for_md(file_path, outfile, exclude_patterns, processed_files, args, stats, matcher, base_path)
 
    elif os.path.isfile(norm_path):
        display_path = os.path.relpath(norm_path, base_path) if base_path else norm_path
@@ -172,6 +178,7 @@ def main():
        parser.error("You must provide an output_file OR use the --stdout flag.")
    
    exclude_patterns = DEFAULT_EXCLUDE_PATTERNS + args.exclude
+   matcher = get_matcher(exclude_patterns)
    processed_files = set()
    stats = {'tokens': 0, 'files': 0}
    
@@ -185,13 +192,11 @@ def main():
                source_paths = [temp_repo_dir]
            if ".git*" not in exclude_patterns:
                exclude_patterns.append(".git*")
+               matcher = get_matcher(exclude_patterns)
 
        # Use sys.stdout if --stdout, otherwise open file
        if args.stdout:
            outfile = sys.stdout
-           # If outputting to stdout, we don't want to close sys.stdout accidentally
-           # using a 'with' block would be bad if we weren't wrapping it.
-           # We'll use a simple reference.
        else:
            outfile = open(args.output_file, 'w', encoding='utf-8')
 
@@ -206,23 +211,13 @@ def main():
                        print(f"⚠️ Warning: Path not found, skipping: {norm_path}", file=sys.stderr)
                    continue
                
-               # For remote repos, we might want to strip the temp dir prefix from the output paths
-               # But process_path functions use os.walk.
-               # TODO: Improve path relativization for remote repos.
                base_path = temp_repo_dir if args.remote else None
 
-               is_excluded = any(fnmatch.fnmatch(os.path.basename(norm_path), p) for p in exclude_patterns)
-               if not is_excluded:
-                   # Determine base_path for relativization
-                   # If remote, base is temp_repo_dir. If local, default to current path's directory?
-                   # Actually, for local paths, we often want relative to the CWD or the path argument itself.
-                   # If args.remote, base_path is definitely temp_repo_dir.
-                   base_path = temp_repo_dir if args.remote else None
-
+               if not matcher(os.path.basename(norm_path)):
                    if args.format == 'xml':
-                       process_path_for_xml(norm_path, outfile, exclude_patterns, processed_files, args, stats, base_path)
+                       process_path_for_xml(norm_path, outfile, exclude_patterns, processed_files, args, stats, matcher, base_path)
                    else:
-                       process_path_for_md(norm_path, outfile, exclude_patterns, processed_files, args, stats, base_path)
+                       process_path_for_md(norm_path, outfile, exclude_patterns, processed_files, args, stats, matcher, base_path)
 
            if args.format == 'xml':
                outfile.write('</contexter_output>\n')
@@ -243,9 +238,6 @@ def main():
            if not args.quiet:
                print("🧹 Cleaning up temporary repository...", file=sys.stderr)
            shutil.rmtree(temp_repo_dir)
-
-if __name__ == "__main__":
-   main()
 
 if __name__ == "__main__":
    main()

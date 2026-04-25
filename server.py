@@ -34,6 +34,15 @@ mcp = FastMCP(
 # --- 3. Core Logic (Refactored from contexter_utils.py) ---
 # These "private" helpers are used by all the tools.
 
+def _get_matcher(patterns: List[str]):
+    """Pre-compiles a list of glob patterns into a single regex for performance."""
+    if not patterns:
+        return lambda _: False
+    norm_patterns = [os.path.normcase(p) for p in patterns]
+    regex_parts = [fnmatch.translate(p) for p in norm_patterns]
+    combined_regex = re.compile('|'.join(regex_parts))
+    return lambda name: bool(combined_regex.match(os.path.normcase(str(name))))
+
 def _get_ignore_patterns(src_path: Path, ignore_file_name: str, extra_ignores: List[str] = []) -> List[str]:
     """Loads ignore patterns from the ignore file and adds defaults."""
     ignore_file_path = src_path / ignore_file_name
@@ -47,17 +56,18 @@ def _get_ignore_patterns(src_path: Path, ignore_file_name: str, extra_ignores: L
 
 def _scan_directory(src_path: Path, ignore_patterns: List[str]) -> List[Path]:
     """Scans the directory and returns a list of all files that are NOT ignored."""
+    matcher = _get_matcher(ignore_patterns)
     included_files = []
     for root, dirs, files in os.walk(src_path, topdown=True):
         current_path = Path(root)
         dirs[:] = [
             d for d in dirs 
-            if not any(fnmatch.fnmatch(current_path.joinpath(d).relative_to(src_path), p) for p in ignore_patterns)
+            if not matcher(current_path.joinpath(d).relative_to(src_path))
         ]
         for file in files:
             file_path = current_path / file
             rel_path = file_path.relative_to(src_path)
-            if not any(fnmatch.fnmatch(rel_path, p) for p in ignore_patterns):
+            if not matcher(rel_path):
                 included_files.append(file_path)
     return included_files
 
