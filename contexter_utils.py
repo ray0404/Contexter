@@ -13,7 +13,6 @@ from pygments import highlight
 from pygments.lexers import get_lexer_by_name, guess_lexer, find_lexer_class_by_name
 from pygments.formatters import HtmlFormatter
 import re
-import re
 import html
 import ast
 import xml.etree.ElementTree as ET
@@ -23,6 +22,9 @@ DEFAULT_EXCLUDE_PATTERNS = [
    ".git*", "node_modules", "__pycache__", "*.pyc", "*.pyo", "dist", "build",
    ".venv", "venv", "*.lock", ".DS_Store", "*.log", ".contexter_cache"
 ]
+
+MD_HEADER_PATTERN = re.compile(r"^--- (FILE|SKIPPED \(BINARY\)): (.*) ---$")
+DIFF_HEADER_PATTERN = re.compile(r"^--- DIFF FOR: (.*) ---$")
 
 # Basic secret patterns (heuristics)
 SECRET_PATTERNS = [
@@ -156,11 +158,10 @@ def parse_md_constructor(file_path):
    current_file = None
    in_code_block = False
    content_lines = []
-   header_pattern = re.compile(r"^--- (FILE|SKIPPED \(BINARY\)): (.*) ---$")
    try:
        with open(file_path, 'r', encoding='utf-8') as f:
            for line in f:
-               match = header_pattern.match(line.strip())
+               match = MD_HEADER_PATTERN.match(line.strip())
                if match:
                    if current_file: # Save previous file
                        files[current_file] = "\n".join(content_lines)
@@ -253,11 +254,10 @@ def _parse_md_patch(file_path):
    patches = {}
    current_file = None
    diff_lines = []
-   diff_header_pattern = re.compile(r"^--- DIFF FOR: (.*) ---$")
    try:
        with open(file_path, 'r', encoding='utf-8') as f:
            for line in f:
-               match = diff_header_pattern.match(line.strip())
+               match = DIFF_HEADER_PATTERN.match(line.strip())
                if match:
                    if current_file: patches[current_file] = patch.fromstring("\n".join(diff_lines).encode('utf-8'))
                    current_file = match.group(1).strip()
