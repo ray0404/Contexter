@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
 import argparse
 import os
-import fnmatch
 from contexter_utils import (
-   DEFAULT_EXCLUDE_PATTERNS, is_binary, generate_file_tree, get_language_from_path
+   DEFAULT_EXCLUDE_PATTERNS, is_binary, generate_file_tree, get_language_from_path,
+   get_matcher
 )
 
-def process_path_for_md(path, outfile, exclude_patterns, processed_files):
+def process_path_for_md(path, outfile, exclude_patterns, processed_files, matcher=None):
    """Recursively processes a path and writes to the MD file, avoiding duplicates."""
    norm_path = os.path.normpath(path)
    if norm_path in processed_files:
        return
    
    processed_files.add(norm_path)
+
+   if matcher is None:
+       matcher = get_matcher(exclude_patterns)
 
    if os.path.isdir(norm_path):
        print(f"📂 Processing directory: {norm_path}")
@@ -24,11 +27,11 @@ def process_path_for_md(path, outfile, exclude_patterns, processed_files):
 
        # Walk through the directory
        for root, dirs, files in os.walk(norm_path, topdown=True):
-           dirs[:] = sorted([d for d in dirs if not any(fnmatch.fnmatch(d, p) for p in exclude_patterns)])
-           files = sorted([f for f in files if not any(fnmatch.fnmatch(f, p) for p in exclude_patterns)])
+           dirs[:] = sorted([d for d in dirs if not matcher(d)])
+           files = sorted([f for f in files if not matcher(f)])
            for filename in files:
                file_path = os.path.join(root, filename)
-               process_path_for_md(file_path, outfile, exclude_patterns, processed_files)
+               process_path_for_md(file_path, outfile, exclude_patterns, processed_files, matcher)
 
    elif os.path.isfile(norm_path):
        if is_binary(norm_path):
@@ -53,6 +56,7 @@ def main():
    args = parser.parse_args()
    
    exclude_patterns = DEFAULT_EXCLUDE_PATTERNS + args.exclude
+   matcher = get_matcher(exclude_patterns)
    processed_files = set()
    
    with open(args.output_file, 'w', encoding='utf-8') as outfile:
@@ -62,9 +66,8 @@ def main():
                print(f"⚠️ Warning: Path not found, skipping: {norm_path}")
                continue
            
-           is_excluded = any(fnmatch.fnmatch(os.path.basename(norm_path), p) for p in exclude_patterns)
-           if not is_excluded:
-               process_path_for_md(norm_path, outfile, exclude_patterns, processed_files)
+           if not matcher(os.path.basename(norm_path)):
+               process_path_for_md(norm_path, outfile, exclude_patterns, processed_files, matcher)
 
    print(f"\n🎉 Success! All paths processed into '{args.output_file}'.")
 
