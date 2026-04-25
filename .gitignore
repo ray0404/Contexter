@@ -1,6 +1,10 @@
+.venv/
 __pycache__/
-*.pyc
 firebase-debug.log
 GEMINI.md
 *.egg-info/
+build/
 blueprints/
+repo*.*
+.ctx/
+.ignore
