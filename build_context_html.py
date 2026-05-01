@@ -2,8 +2,7 @@
 import argparse
 import os
 from contexter_utils import (
-   DEFAULT_EXCLUDE_PATTERNS, is_binary, generate_file_tree, rebuild_html_constructor,
-   get_matcher
+   DEFAULT_EXCLUDE_PATTERNS, is_binary, generate_file_tree, rebuild_html_constructor, get_matcher
 )
 
 def main():
@@ -14,9 +13,9 @@ def main():
    args = parser.parse_args()
    
    exclude_patterns = DEFAULT_EXCLUDE_PATTERNS + args.exclude
-   matcher = get_matcher(exclude_patterns)
    files_to_include = {}
    tree_content = ""
+   is_excluded = get_matcher(exclude_patterns)
 
    for path in args.paths:
        norm_path = os.path.normpath(path)
@@ -24,16 +23,16 @@ def main():
            print(f"⚠️ Warning: Path not found, skipping: {norm_path}")
            continue
        
-       if matcher(os.path.basename(norm_path)):
+       if is_excluded(os.path.basename(norm_path)):
            continue
 
        if os.path.isdir(norm_path):
            print(f"📂 Processing directory: {norm_path}")
-           tree_content += generate_file_tree(norm_path, exclude_patterns) + "\n\n"
+           tree_content += generate_file_tree(norm_path, exclude_patterns, is_excluded) + "\n\n"
            for root, dirs, files in os.walk(norm_path, topdown=True):
-               dirs[:] = sorted([d for d in dirs if not matcher(d)])
+               dirs[:] = sorted([d for d in dirs if not is_excluded(d)])
                for filename in sorted(files):
-                   if matcher(filename): continue
+                   if is_excluded(filename): continue
                    file_path = os.path.join(root, filename)
                    if is_binary(file_path):
                        print(f"⚫ Skipping (binary): {file_path}")

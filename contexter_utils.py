@@ -106,10 +106,10 @@ def compress_code(content, file_path):
 def get_matcher(patterns):
    """Pre-compiles a list of glob patterns into a single regex for performance."""
    if not patterns:
-      return lambda _: False
-   norm_patterns = [os.path.normcase(p) for p in patterns]
-   regex_parts = [fnmatch.translate(p) for p in norm_patterns]
-   combined_regex = re.compile('|'.join(regex_parts))
+       return lambda name: False
+   # Use normcase on patterns to match fnmatch behavior
+   normalized_patterns = [os.path.normcase(p) for p in patterns]
+   combined_regex = re.compile('|'.join(fnmatch.translate(p) for p in normalized_patterns))
    return lambda name: bool(combined_regex.match(os.path.normcase(str(name))))
 
 def is_binary(file_path):
@@ -126,16 +126,17 @@ def is_binary(file_path):
        return True
    return False
 
-def generate_file_tree(start_path, exclude_patterns):
+def generate_file_tree(start_path, exclude_patterns, is_excluded=None):
    """Generates a string representation of the file tree."""
-   matcher = get_matcher(exclude_patterns)
-   tree_lines = []
    # Normalize start_path to ensure consistent trailing slash behavior
    start_path = os.path.normpath(start_path)
+   if is_excluded is None:
+       is_excluded = get_matcher(exclude_patterns)
+   tree_lines = []
    for root, dirs, files in os.walk(start_path, topdown=True):
        # Exclude directories and files based on patterns
-       dirs[:] = sorted([d for d in dirs if not matcher(d)])
-       files = sorted([f for f in files if not matcher(f)])
+       dirs[:] = sorted([d for d in dirs if not is_excluded(d)])
+       files = sorted([f for f in files if not is_excluded(f)])
 
        relative_root = os.path.relpath(root, start_path)
        if relative_root == ".":
