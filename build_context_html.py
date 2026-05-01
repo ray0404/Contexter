@@ -2,7 +2,7 @@
 import argparse
 import os
 from contexter_utils import (
-   DEFAULT_EXCLUDE_PATTERNS, is_binary, generate_file_tree, rebuild_html_constructor, get_matcher
+   DEFAULT_EXCLUDE_PATTERNS, safe_read_text, generate_file_tree, rebuild_html_constructor, get_matcher
 )
 
 def main():
@@ -34,23 +34,20 @@ def main():
                for filename in sorted(files):
                    if is_excluded(filename): continue
                    file_path = os.path.join(root, filename)
-                   if is_binary(file_path):
+                   is_bin, content = safe_read_text(file_path)
+                   if is_bin:
                        print(f"⚫ Skipping (binary): {file_path}")
                        files_to_include[file_path] = None
                    else:
-                       try:
-                           with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                               files_to_include[file_path] = f.read()
-                           print(f"✅ Processed: {file_path}")
-                       except Exception as e:
-                           print(f"❌ Error reading file {file_path}: {e}")
+                       files_to_include[file_path] = content
+                       print(f"✅ Processed: {file_path}")
        elif os.path.isfile(norm_path):
             # Logic to handle single files, similar to directory walk
-           if is_binary(norm_path):
+           is_bin, content = safe_read_text(norm_path)
+           if is_bin:
                files_to_include[norm_path] = None
            else:
-               with open(norm_path, 'r', encoding='utf-8', errors='ignore') as f:
-                   files_to_include[norm_path] = f.read()
+               files_to_include[norm_path] = content
    
    rebuild_html_constructor(args.output_file, files_to_include, tree_content.strip())
    print(f"\n🎉 Success! HTML context file created at '{args.output_file}'.")
