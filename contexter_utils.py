@@ -26,6 +26,10 @@ DEFAULT_EXCLUDE_PATTERNS = [
 MD_HEADER_PATTERN = re.compile(r"^--- (FILE|SKIPPED \(BINARY\)): (.*) ---$")
 DIFF_HEADER_PATTERN = re.compile(r"^--- DIFF FOR: (.*) ---$")
 
+# Patterns for code compression
+SINGLE_LINE_COMMENT_PATTERN = re.compile(r'//.*')
+MULTI_LINE_COMMENT_PATTERN = re.compile(r'/\*.*?\*/', flags=re.DOTALL)
+
 # Basic secret patterns (heuristics)
 SECRET_PATTERNS = [
     (r"AKIA[0-9A-Z]{16}", "AWS Access Key"),
@@ -89,9 +93,9 @@ def compress_code(content, file_path):
     # C-style comments (// and /* */)
     if ext in ['.js', '.ts', '.c', '.cpp', '.java', '.cs', '.go', '.rs', '.php', '.css', '.scss']:
         # Remove single line comments
-        content = re.sub(r'//.*', '', content)
+        content = SINGLE_LINE_COMMENT_PATTERN.sub('', content)
         # Remove multi-line comments
-        content = re.sub(r'/\*.*?\*/', '', content, flags=re.DOTALL)
+        content = MULTI_LINE_COMMENT_PATTERN.sub('', content)
         # Remove empty lines resulting from deletion
         return "\n".join([line for line in content.splitlines() if line.strip()])
 
