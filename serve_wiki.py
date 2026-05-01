@@ -59,13 +59,15 @@ class WikiHandler(http.server.SimpleHTTPRequestHandler):
             links = []
             for root, dirs, files in os.walk(WIKI_DIR):
                 for f in sorted(files):
-                    if f.endswith(".md"):
+                    if f.lower().endswith(".md"):
                         # Rel path from WIKI_DIR
                         abs_path = os.path.join(root, f)
                         rel_path = os.path.relpath(abs_path, WIKI_DIR)
-                        # Remove .md for the link url
-                        url_path = "/" + rel_path.replace(".md", "")
-                        display_name = rel_path.replace(".md", "")
+                        # Remove .md for the link url (ensure only at the end)
+                        url_stub = rel_path[:-3] if rel_path.lower().endswith(".md") else rel_path
+                        # Use forward slashes for URL
+                        url_path = "/" + url_stub.replace(os.sep, "/")
+                        display_name = url_stub.replace(os.sep, "/")
                         links.append(f'<li><a href="{url_path}">{display_name}</a></li>')
             
             links_html = "".join(links)
@@ -105,14 +107,20 @@ class WikiHandler(http.server.SimpleHTTPRequestHandler):
                 content = f.read()
                 html_content = markdown.markdown(content, extensions=['fenced_code', 'codehilite', 'tables'])
                 
-                # Post-processing to fix relative links
+                # Post-processing to fix relative links in <a> tags
                 def fix_link(match):
                     href = match.group(1)
-                    if not href.startswith(('http://', 'https://', 'mailto:', '#')):
-                        href = re.sub(r'\.md(#|$)', r'\1', href)
+                    # Skip absolute links, mailto, protocol-relative, and fragments
+                    if not href.startswith(('http://', 'https://', 'mailto:', '#', '//')):
+                        # Strip .md extension before any # or ? or at end of string, case-insensitive
+                        href = re.sub(r'\.md(?=[#?]|$)', '', href, flags=re.IGNORECASE)
                     return f'href="{href}"'
 
-                html_content = re.sub(r'href="([^"]+)"', fix_link, html_content)
+                def fix_tag(match):
+                    tag = match.group(0)
+                    return re.sub(r'href="([^"]+)"', fix_link, tag)
+
+                html_content = re.sub(r'<a\s+[^>]+>', fix_tag, html_content, flags=re.IGNORECASE)
 
             full_html = f"""
             <html>
