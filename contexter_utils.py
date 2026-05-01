@@ -23,6 +23,15 @@ DEFAULT_EXCLUDE_PATTERNS = [
 
 # --- File System Utilities ---
 
+def get_matcher(patterns):
+   """Returns a function that matches a filename against a list of glob patterns."""
+   if not patterns:
+       return lambda name: False
+   # Use normcase on patterns to match fnmatch behavior
+   normalized_patterns = [os.path.normcase(p) for p in patterns]
+   combined_regex = re.compile('|'.join(fnmatch.translate(p) for p in normalized_patterns))
+   return lambda name: bool(combined_regex.match(os.path.normcase(name)))
+
 def is_binary(file_path):
    """Checks if a file is binary using MIME types and a content heuristic."""
    mime_type, _ = mimetypes.guess_type(file_path)
@@ -37,15 +46,17 @@ def is_binary(file_path):
        return True
    return False
 
-def generate_file_tree(start_path, exclude_patterns):
+def generate_file_tree(start_path, exclude_patterns, is_excluded=None):
    """Generates a string representation of the file tree."""
    tree_lines = []
    # Normalize start_path to ensure consistent trailing slash behavior
    start_path = os.path.normpath(start_path)
+   if is_excluded is None:
+       is_excluded = get_matcher(exclude_patterns)
    for root, dirs, files in os.walk(start_path, topdown=True):
        # Exclude directories and files based on patterns
-       dirs[:] = sorted([d for d in dirs if not any(fnmatch.fnmatch(d, p) for p in exclude_patterns)])
-       files = sorted([f for f in files if not any(fnmatch.fnmatch(f, p) for p in exclude_patterns)])
+       dirs[:] = sorted([d for d in dirs if not is_excluded(d)])
+       files = sorted([f for f in files if not is_excluded(f)])
 
        relative_root = os.path.relpath(root, start_path)
        if relative_root == ".":
