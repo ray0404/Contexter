@@ -3,7 +3,7 @@ import argparse
 import os
 import fnmatch
 from contexter_utils import (
-   DEFAULT_EXCLUDE_PATTERNS, is_binary, generate_file_tree, get_language_from_path
+   DEFAULT_EXCLUDE_PATTERNS, safe_read_text, generate_file_tree, get_language_from_path
 )
 
 def process_path_for_md(path, outfile, exclude_patterns, processed_files):
@@ -31,19 +31,19 @@ def process_path_for_md(path, outfile, exclude_patterns, processed_files):
                process_path_for_md(file_path, outfile, exclude_patterns, processed_files)
 
    elif os.path.isfile(norm_path):
-       if is_binary(norm_path):
+       is_bin, content = safe_read_text(norm_path)
+       if is_bin:
            print(f"⚫ Skipping (binary): {norm_path}")
            outfile.write(f"--- SKIPPED (BINARY): {norm_path} ---\n\n")
            return
+
        try:
-           with open(norm_path, 'r', encoding='utf-8', errors='ignore') as infile:
-               content = infile.read()
-               lang = get_language_from_path(norm_path)
-               outfile.write(f"--- FILE: {norm_path} ---\n\n")
-               outfile.write(f"````{lang}\n{content.strip()}\n````\n\n")
-               print(f"✅ Processed: {norm_path}")
+           lang = get_language_from_path(norm_path)
+           outfile.write(f"--- FILE: {norm_path} ---\n\n")
+           outfile.write(f"````{lang}\n{content.strip()}\n````\n\n")
+           print(f"✅ Processed: {norm_path}")
        except Exception as e:
-           print(f"❌ Error reading file {norm_path}: {e}")
+           print(f"❌ Error processing file {norm_path}: {e}")
 
 def main():
    parser = argparse.ArgumentParser(description="Combine source files into a single Markdown context file.")

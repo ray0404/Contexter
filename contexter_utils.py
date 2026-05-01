@@ -25,17 +25,34 @@ DEFAULT_EXCLUDE_PATTERNS = [
 
 def is_binary(file_path):
    """Checks if a file is binary using MIME types and a content heuristic."""
+   is_bin, _ = _check_binary_and_read(file_path, read_full=False)
+   return is_bin
+
+def safe_read_text(file_path, encoding='utf-8', errors='ignore'):
+   """Checks if a file is binary and reads it if not. Returns (is_binary, content)."""
+   return _check_binary_and_read(file_path, read_full=True, encoding=encoding, errors=errors)
+
+def _check_binary_and_read(file_path, read_full=False, encoding='utf-8', errors='ignore'):
+   """Internal helper to check binary status and optionally read full content."""
    mime_type, _ = mimetypes.guess_type(file_path)
    if mime_type and not mime_type.startswith('text/'):
-       if any(sub in mime_type for sub in ["javascript", "json", "xml", "sql", "toml", "yaml"]):
-           return False
-       return True
+       if not any(sub in mime_type for sub in ["javascript", "json", "xml", "sql", "toml", "yaml"]):
+           return True, None
+
    try:
        with open(file_path, 'rb') as f:
-           return b'\0' in f.read(1024)
-   except IOError:
-       return True
-   return False
+           chunk = f.read(1024)
+           if b'\0' in chunk:
+               return True, None
+
+           if not read_full:
+               return False, None
+
+           # Only read the full content if it's not binary (determined by the first chunk)
+           content_bytes = chunk + f.read()
+           return False, content_bytes.decode(encoding, errors=errors)
+   except (IOError, UnicodeDecodeError):
+       return True, None
 
 def generate_file_tree(start_path, exclude_patterns):
    """Generates a string representation of the file tree."""
