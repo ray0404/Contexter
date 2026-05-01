@@ -8,7 +8,7 @@ import tempfile
 import sys
 from xml.sax.saxutils import escape
 from contexter_utils import (
-   DEFAULT_EXCLUDE_PATTERNS, is_binary, generate_file_tree, get_language_from_path,
+   DEFAULT_EXCLUDE_PATTERNS, safe_read_text, generate_file_tree, get_language_from_path,
    estimate_token_count, scan_for_secrets, compress_code, get_matcher
 )
 
@@ -61,7 +61,7 @@ def process_path_for_xml(path, outfile, exclude_patterns, processed_files, args,
            print(f"📂 Processing directory: {norm_path}", file=sys.stderr)
        is_top_level = len(processed_files) == 1
        if is_top_level:
-           tree = generate_file_tree(norm_path, exclude_patterns)
+           tree = generate_file_tree(norm_path, exclude_patterns, matcher)
            outfile.write(f"  <directory_structure>\n{escape(tree)}\n  </directory_structure>\n")
 
        for root, dirs, files in os.walk(norm_path, topdown=True):
@@ -74,29 +74,26 @@ def process_path_for_xml(path, outfile, exclude_patterns, processed_files, args,
    elif os.path.isfile(norm_path):
        display_path = os.path.relpath(norm_path, base_path) if base_path else norm_path
        
-       if is_binary(norm_path):
+       is_bin, content = safe_read_text(norm_path)
+       if is_bin:
            if not args.quiet:
                print(f"⚫ Skipping (binary): {norm_path}", file=sys.stderr)
            outfile.write(f'  <file path="{escape(display_path)}" is_binary="true" />\n')
            return
        try:
-           with open(norm_path, 'r', encoding='utf-8', errors='ignore') as infile:
-               content = infile.read()
-               
-               content, warnings = process_file_content(norm_path, content, args)
-               
-               tokens = estimate_token_count(content)
-               stats['tokens'] += tokens
-               stats['files'] += 1
-               
-               outfile.write(f'  <file path="{escape(display_path)}">{escape(content)}</file>\n')
-               if not args.quiet:
-                   print(f"✅ Processed: {norm_path} ({tokens} tokens)", file=sys.stderr)
+           content, warnings = process_file_content(norm_path, content, args)
+           
+           tokens = estimate_token_count(content)
+           stats['tokens'] += tokens
+           stats['files'] += 1
+           
+           outfile.write(f'  <file path="{escape(display_path)}">{escape(content)}</file>\n')
+           if not args.quiet:
+               print(f"✅ Processed: {norm_path} ({tokens} tokens)", file=sys.stderr)
        except Exception as e:
-           print(f"❌ Error reading file {norm_path}: {e}", file=sys.stderr)
+           print(f"❌ Error processing file {norm_path}: {e}", file=sys.stderr)
 
 def process_path_for_md(path, outfile, exclude_patterns, processed_files, args, stats, matcher=None, base_path=None):
-
    """Recursively processes a path and writes to the MD file, avoiding duplicates."""
    norm_path = os.path.normpath(path)
    if norm_path in processed_files:
@@ -112,7 +109,7 @@ def process_path_for_md(path, outfile, exclude_patterns, processed_files, args, 
            print(f"📂 Processing directory: {norm_path}", file=sys.stderr)
        is_top_level = len(processed_files) == 1
        if is_top_level:
-           tree = generate_file_tree(norm_path, exclude_patterns)
+           tree = generate_file_tree(norm_path, exclude_patterns, matcher)
            outfile.write(f"--- DIRECTORY STRUCTURE: {os.path.basename(norm_path)} ---\n\n````\n{tree}\n````\n\n")
 
        for root, dirs, files in os.walk(norm_path, topdown=True):
@@ -122,32 +119,29 @@ def process_path_for_md(path, outfile, exclude_patterns, processed_files, args, 
                file_path = os.path.join(root, filename)
                process_path_for_md(file_path, outfile, exclude_patterns, processed_files, args, stats, matcher, base_path)
 
-
    elif os.path.isfile(norm_path):
        display_path = os.path.relpath(norm_path, base_path) if base_path else norm_path
 
-       if is_binary(norm_path):
+       is_bin, content = safe_read_text(norm_path)
+       if is_bin:
            if not args.quiet:
                print(f"⚫ Skipping (binary): {norm_path}", file=sys.stderr)
            outfile.write(f"--- SKIPPED (BINARY): {display_path} ---\n\n")
            return
        try:
-           with open(norm_path, 'r', encoding='utf-8', errors='ignore') as infile:
-               content = infile.read()
-               
-               content, warnings = process_file_content(norm_path, content, args)
-               
-               tokens = estimate_token_count(content)
-               stats['tokens'] += tokens
-               stats['files'] += 1
-               
-               lang = get_language_from_path(norm_path)
-               outfile.write(f"--- FILE: {display_path} ---\n\n")
-               outfile.write(f"````{lang}\n{content.strip()}\n````\n\n")
-               if not args.quiet:
-                   print(f"✅ Processed: {norm_path} ({tokens} tokens)", file=sys.stderr)
+           content, warnings = process_file_content(norm_path, content, args)
+           
+           tokens = estimate_token_count(content)
+           stats['tokens'] += tokens
+           stats['files'] += 1
+           
+           lang = get_language_from_path(norm_path)
+           outfile.write(f"--- FILE: {display_path} ---\n\n")
+           outfile.write(f"````{lang}\n{content.strip()}\n````\n\n")
+           if not args.quiet:
+               print(f"✅ Processed: {norm_path} ({tokens} tokens)", file=sys.stderr)
        except Exception as e:
-           print(f"❌ Error reading file {norm_path}: {e}", file=sys.stderr)
+           print(f"❌ Error processing file {norm_path}: {e}", file=sys.stderr)
 
 def main():
    parser = argparse.ArgumentParser(description="Combine source files into a single context file.")
@@ -162,11 +156,6 @@ def main():
    parser.add_argument("-q", "--quiet", action="store_true", help="Suppress progress messages.")
    args = parser.parse_args()
    
-   # If stdout is used, enable quiet mode by default to keep the output clean
-   if args.stdout:
-       args.quiet = True
-
-
    # Handle argument shift when --stdout is used
    # If --stdout is set, the first positional argument (parsed as output_file) 
    # should be treated as a source path.
@@ -180,6 +169,10 @@ def main():
    if not args.output_file and not args.stdout:
        parser.error("You must provide an output_file OR use the --stdout flag.")
    
+   # If stdout is used, enable quiet mode by default to keep the output clean
+   if args.stdout:
+       args.quiet = True
+
    exclude_patterns = DEFAULT_EXCLUDE_PATTERNS + args.exclude
    matcher = get_matcher(exclude_patterns)
    processed_files = set()

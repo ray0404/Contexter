@@ -106,36 +106,54 @@ def compress_code(content, file_path):
 def get_matcher(patterns):
    """Pre-compiles a list of glob patterns into a single regex for performance."""
    if not patterns:
-      return lambda _: False
-   norm_patterns = [os.path.normcase(p) for p in patterns]
-   regex_parts = [fnmatch.translate(p) for p in norm_patterns]
-   combined_regex = re.compile('|'.join(regex_parts))
+       return lambda name: False
+   # Use normcase on patterns to match fnmatch behavior
+   normalized_patterns = [os.path.normcase(p) for p in patterns]
+   combined_regex = re.compile('|'.join(fnmatch.translate(p) for p in normalized_patterns))
    return lambda name: bool(combined_regex.match(os.path.normcase(str(name))))
 
 def is_binary(file_path):
    """Checks if a file is binary using MIME types and a content heuristic."""
+   is_bin, _ = _check_binary_and_read(file_path, read_full=False)
+   return is_bin
+
+def safe_read_text(file_path, encoding='utf-8', errors='ignore'):
+   """Checks if a file is binary and reads it if not. Returns (is_binary, content)."""
+   return _check_binary_and_read(file_path, read_full=True, encoding=encoding, errors=errors)
+
+def _check_binary_and_read(file_path, read_full=False, encoding='utf-8', errors='ignore'):
+   """Internal helper to check binary status and optionally read full content."""
    mime_type, _ = mimetypes.guess_type(file_path)
    if mime_type and not mime_type.startswith('text/'):
-       if any(sub in mime_type for sub in ["javascript", "json", "xml", "sql", "toml", "yaml"]):
-           return False
-       return True
+       if not any(sub in mime_type for sub in ["javascript", "json", "xml", "sql", "toml", "yaml"]):
+           return True, None
+
    try:
        with open(file_path, 'rb') as f:
-           return b'\0' in f.read(1024)
-   except IOError:
-       return True
-   return False
+           chunk = f.read(1024)
+           if b'\0' in chunk:
+               return True, None
 
-def generate_file_tree(start_path, exclude_patterns):
+           if not read_full:
+               return False, None
+
+           # Only read the full content if it's not binary (determined by the first chunk)
+           content_bytes = chunk + f.read()
+           return False, content_bytes.decode(encoding, errors=errors)
+   except (IOError, UnicodeDecodeError):
+       return True, None
+
+def generate_file_tree(start_path, exclude_patterns, is_excluded=None):
    """Generates a string representation of the file tree."""
-   matcher = get_matcher(exclude_patterns)
-   tree_lines = []
    # Normalize start_path to ensure consistent trailing slash behavior
    start_path = os.path.normpath(start_path)
+   if is_excluded is None:
+       is_excluded = get_matcher(exclude_patterns)
+   tree_lines = []
    for root, dirs, files in os.walk(start_path, topdown=True):
        # Exclude directories and files based on patterns
-       dirs[:] = sorted([d for d in dirs if not matcher(d)])
-       files = sorted([f for f in files if not matcher(f)])
+       dirs[:] = sorted([d for d in dirs if not is_excluded(d)])
+       files = sorted([f for f in files if not is_excluded(f)])
 
        relative_root = os.path.relpath(root, start_path)
        if relative_root == ".":
