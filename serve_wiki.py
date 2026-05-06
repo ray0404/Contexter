@@ -3,6 +3,7 @@ import socketserver
 import os
 import markdown
 import re
+from bs4 import BeautifulSoup
 from pygments.formatters import HtmlFormatter
 
 PORT = 8000
@@ -63,10 +64,10 @@ class WikiHandler(http.server.SimpleHTTPRequestHandler):
                         # Rel path from WIKI_DIR
                         abs_path = os.path.join(root, f)
                         rel_path = os.path.relpath(abs_path, WIKI_DIR)
-                        # Remove .md for the link url (ensure only at the end)
+                        # Remove .md and replace with .html for the link url
                         url_stub = rel_path[:-3] if rel_path.lower().endswith(".md") else rel_path
-                        # Use forward slashes for URL
-                        url_path = "/" + url_stub.replace(os.sep, "/")
+                        # Use forward slashes for URL and prefix with /wiki/
+                        url_path = "/wiki/" + url_stub.replace(os.sep, "/") + ".html"
                         display_name = url_stub.replace(os.sep, "/")
                         links.append(f'<li><a href="{url_path}">{display_name}</a></li>')
             
@@ -88,7 +89,18 @@ class WikiHandler(http.server.SimpleHTTPRequestHandler):
 
         # Handle file requests
         # Clean path
-        path = self.path.lstrip("/")
+        path = self.path
+        if path.startswith("/wiki/"):
+            path = path[6:]
+        elif path.startswith("/wiki"):
+            path = path[5:]
+        else:
+            path = path.lstrip("/")
+
+        # Handle .html extension in the URL
+        if path.endswith(".html"):
+            path = path[:-5]
+
         filepath = os.path.join(WIKI_DIR, path)
         
         # Try finding the file. It might lack .md extension in the URL
@@ -105,22 +117,24 @@ class WikiHandler(http.server.SimpleHTTPRequestHandler):
 
             with open(found_path, "r", encoding="utf-8") as f:
                 content = f.read()
-                html_content = markdown.markdown(content, extensions=['fenced_code', 'codehilite', 'tables'])
+                raw_html = markdown.markdown(content, extensions=['fenced_code', 'codehilite', 'tables'])
                 
-                # Post-processing to fix relative links in <a> tags
-                def fix_link(match):
-                    href = match.group(1)
+                # Post-processing to fix relative links in <a> tags using BeautifulSoup
+                soup = BeautifulSoup(raw_html, 'html.parser')
+                for a in soup.find_all('a', href=True):
+                    href = a['href']
                     # Skip absolute links, mailto, protocol-relative, and fragments
                     if not href.startswith(('http://', 'https://', 'mailto:', '#', '//')):
-                        # Strip .md extension before any # or ? or at end of string, case-insensitive
-                        href = re.sub(r'\.md(?=[#?]|$)', '', href, flags=re.IGNORECASE)
-                    return f'href="{href}"'
+                        # Replace .md extension with .html
+                        href = re.sub(r'\.md(?=[#?]|$)', '.html', href, flags=re.IGNORECASE)
+                        # Ensure it starts with /wiki/
+                        if not href.startswith('/'):
+                            href = '/wiki/' + href
+                        elif not href.startswith('/wiki/'):
+                            href = '/wiki' + href
+                        a['href'] = href
 
-                def fix_tag(match):
-                    tag = match.group(0)
-                    return re.sub(r'href="([^"]+)"', fix_link, tag)
-
-                html_content = re.sub(r'<a\s+[^>]+>', fix_tag, html_content, flags=re.IGNORECASE)
+                html_content = str(soup)
 
             full_html = f"""
             <html>
