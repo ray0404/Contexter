@@ -14,7 +14,7 @@ def main():
    
    exclude_patterns = DEFAULT_EXCLUDE_PATTERNS + args.exclude
    files_to_include = {}
-   tree_content = ""
+   tree_content_parts = []
    is_excluded = get_matcher(exclude_patterns)
 
    for path in args.paths:
@@ -28,7 +28,7 @@ def main():
 
        if os.path.isdir(norm_path):
            print(f"📂 Processing directory: {norm_path}")
-           tree_content += generate_file_tree(norm_path, exclude_patterns, is_excluded) + "\n\n"
+           tree_content_parts.append(generate_file_tree(norm_path, exclude_patterns, is_excluded) + "\n\n")
            for root, dirs, files in os.walk(norm_path, topdown=True):
                dirs[:] = sorted([d for d in dirs if not is_excluded(d)])
                for filename in sorted(files):
@@ -49,7 +49,7 @@ def main():
            else:
                files_to_include[norm_path] = content
    
-   rebuild_html_constructor(args.output_file, files_to_include, tree_content.strip())
+   rebuild_html_constructor(args.output_file, files_to_include, "".join(tree_content_parts).strip())
    print(f"\n🎉 Success! HTML context file created at '{args.output_file}'.")
 
 if __name__ == "__main__":
