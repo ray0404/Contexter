@@ -3,6 +3,7 @@ import socketserver
 import os
 import markdown
 import re
+import time
 from pygments.formatters import HtmlFormatter
 
 PORT = 8000
@@ -49,12 +50,21 @@ STYLE = """
 """
 
 class WikiHandler(http.server.SimpleHTTPRequestHandler):
+    _index_cache = None
+    _index_cache_time = 0
+    _CACHE_TTL = 30  # seconds
+
     def do_GET(self):
         if self.path == "/" or self.path == "":
             self.send_response(200)
             self.send_header("Content-type", "text/html")
             self.end_headers()
             
+            current_time = time.time()
+            if self._index_cache and (current_time - self._index_cache_time < self._CACHE_TTL):
+                self.wfile.write(self._index_cache)
+                return
+
             # Generate index by walking the directory
             links = []
             for root, dirs, files in os.walk(WIKI_DIR):
@@ -83,7 +93,11 @@ class WikiHandler(http.server.SimpleHTTPRequestHandler):
             </body>
             </html>
             """
-            self.wfile.write(html.encode("utf-8"))
+            encoded_html = html.encode("utf-8")
+            WikiHandler._index_cache = encoded_html
+            WikiHandler._index_cache_time = current_time
+
+            self.wfile.write(encoded_html)
             return
 
         # Handle file requests
