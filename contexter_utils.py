@@ -32,12 +32,12 @@ MULTI_LINE_COMMENT_PATTERN = re.compile(r'/\*.*?\*/', flags=re.DOTALL)
 
 # Basic secret patterns (heuristics)
 SECRET_PATTERNS = [
-    (r"AKIA[0-9A-Z]{16}", "AWS Access Key"),
-    (r"-----BEGIN RSA PRIVATE KEY-----", "RSA Private Key"),
-    (r"-----BEGIN OPENSSH PRIVATE KEY-----", "OpenSSH Private Key"),
-    (r"ghp_[0-9a-zA-Z]{36}", "GitHub Personal Access Token"),
-    (r"xox[baprs]-([0-9a-zA-Z]{10,48})", "Slack Token"),
-    (r"sk_live_[0-9a-zA-Z]{24}", "Stripe Live Key"),
+    (re.compile(r"AKIA[0-9A-Z]{16}"), "AWS Access Key"),
+    (re.compile(r"-----BEGIN RSA PRIVATE KEY-----"), "RSA Private Key"),
+    (re.compile(r"-----BEGIN OPENSSH PRIVATE KEY-----"), "OpenSSH Private Key"),
+    (re.compile(r"ghp_[0-9a-zA-Z]{36}"), "GitHub Personal Access Token"),
+    (re.compile(r"xox[baprs]-([0-9a-zA-Z]{10,48})"), "Slack Token"),
+    (re.compile(r"sk_live_[0-9a-zA-Z]{24}"), "Stripe Live Key"),
 ]
 
 # --- Analysis Utilities ---
@@ -52,7 +52,7 @@ def scan_for_secrets(content, file_path=""):
     """Scans content for common secret patterns. Returns list of found warnings."""
     warnings = []
     for pattern, name in SECRET_PATTERNS:
-        if re.search(pattern, content):
+        if pattern.search(content):
             warnings.append(f"Potential {name} found in {file_path}")
     return warnings
 
