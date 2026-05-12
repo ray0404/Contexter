@@ -55,17 +55,22 @@ def _scan_directory(src_path: Path, ignore_patterns: List[str]) -> List[Path]:
     """Scans the directory and returns a list of all files that are NOT ignored."""
     included_files = []
     is_ignored = get_matcher(ignore_patterns)
+    src_path_str = str(src_path)
     for root, dirs, files in os.walk(src_path, topdown=True):
-        current_path = Path(root)
+        rel_root = os.path.relpath(root, src_path_str)
+        if rel_root == '.':
+            rel_root = ''
+
         dirs[:] = [
             d for d in dirs 
-            if not is_ignored(str(current_path.joinpath(d).relative_to(src_path)))
+            if not is_ignored(os.path.join(rel_root, d) if rel_root else d)
         ]
+
+        current_path = Path(root)
         for file in files:
-            file_path = current_path / file
-            rel_path = file_path.relative_to(src_path)
-            if not is_ignored(str(rel_path)):
-                included_files.append(file_path)
+            rel_file = os.path.join(rel_root, file) if rel_root else file
+            if not is_ignored(rel_file):
+                included_files.append(current_path / file)
     return included_files
 
 def _read_file_content(file_path: Path) -> str | None:
