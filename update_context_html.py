@@ -13,6 +13,19 @@ def write_md_patch(output_path, diffs):
            f.write(diff_content)
            f.write("\n```\n\n")
 
+
+def _iter_lines(s):
+   if not s:
+       return
+   start = 0
+   while True:
+       idx = s.find('\n', start)
+       if idx == -1:
+           yield s[start:]
+           break
+       yield s[start:idx]
+       start = idx + 1
+
 def write_html_patch(output_path, diffs):
    """Writes the diffs to a styled HTML formatted patch file."""
    css_style = """
@@ -34,7 +47,7 @@ def write_html_patch(output_path, diffs):
        html_parts.append(f'<h2>DIFF FOR: <span class="path">{html.escape(file_path)}</span></h2>')
        
        formatted_lines = []
-       for line in diff_content.split('\n'):
+       for line in _iter_lines(diff_content):
            escaped_line = html.escape(line)
            if line.startswith('+'):
                formatted_lines.append(f'<span class="line add">{escaped_line}</span>')
