@@ -8,3 +8,4 @@ blueprints/
 repo*.*
 .ctx/
 .ignore
+deepwiki/dir_*

@@ -48,29 +48,42 @@ STYLE = """
 </style>
 """
 
+import time
+
 class WikiHandler(http.server.SimpleHTTPRequestHandler):
+    _index_cache = None
+    _index_cache_time = 0
+    _CACHE_TTL = 30
+
     def do_GET(self):
         if self.path == "/" or self.path == "":
             self.send_response(200)
             self.send_header("Content-type", "text/html")
             self.end_headers()
             
-            # Generate index by walking the directory
-            links = []
-            for root, dirs, files in os.walk(WIKI_DIR):
-                for f in sorted(files):
-                    if f.lower().endswith(".md"):
-                        # Rel path from WIKI_DIR
-                        abs_path = os.path.join(root, f)
-                        rel_path = os.path.relpath(abs_path, WIKI_DIR)
-                        # Remove .md for the link url (ensure only at the end)
-                        url_stub = rel_path[:-3] if rel_path.lower().endswith(".md") else rel_path
-                        # Use forward slashes for URL
-                        url_path = "/" + url_stub.replace(os.sep, "/")
-                        display_name = url_stub.replace(os.sep, "/")
-                        links.append(f'<li><a href="{url_path}">{display_name}</a></li>')
-            
-            links_html = "".join(links)
+            # Use cached index if valid
+            current_time = time.time()
+            if self._index_cache is not None and (current_time - self._index_cache_time) < self._CACHE_TTL:
+                links_html = self._index_cache
+            else:
+                # Generate index by walking the directory
+                links = []
+                for root, dirs, files in os.walk(WIKI_DIR):
+                    for f in sorted(files):
+                        if f.lower().endswith(".md"):
+                            # Rel path from WIKI_DIR
+                            abs_path = os.path.join(root, f)
+                            rel_path = os.path.relpath(abs_path, WIKI_DIR)
+                            # Remove .md for the link url (ensure only at the end)
+                            url_stub = rel_path[:-3] if rel_path.lower().endswith(".md") else rel_path
+                            # Use forward slashes for URL
+                            url_path = "/" + url_stub.replace(os.sep, "/")
+                            display_name = url_stub.replace(os.sep, "/")
+                            links.append(f'<li><a href="{url_path}">{display_name}</a></li>')
+
+                links_html = "".join(links)
+                WikiHandler._index_cache = links_html
+                WikiHandler._index_cache_time = current_time
             
             html = f"""
             <html>
