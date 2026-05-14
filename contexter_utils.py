@@ -172,7 +172,31 @@ def generate_file_tree(start_path, exclude_patterns, is_excluded=None):
    return f"{os.path.basename(start_path)}/\n" + "\n".join(tree_lines)
 
 
+
+def generate_file_tree_from_nodes(start_path, nodes):
+   """Generates a string representation of the file tree from pre-walked nodes."""
+   start_path = os.path.normpath(start_path)
+   tree_lines = []
+   for root, dirs, files in nodes:
+       relative_root = os.path.relpath(root, start_path)
+       if relative_root == ".":
+           level = 0
+       else:
+           level = relative_root.count(os.sep) + 1
+
+       indent = '│   ' * (level - 1)
+       if level > 0:
+           tree_lines.append(f"{indent}├── {os.path.basename(root)}/")
+
+       sub_indent = '│   ' * level
+       for i, f in enumerate(files):
+           tree_lines.append(f"{sub_indent}├── {f}")
+
+   return f"{os.path.basename(start_path)}/\n" + "\n".join(tree_lines)
+
+
 # --- Parsing Utilities ---
+
 
 def parse_md_constructor(file_path):
    """Parses a Markdown constructor file into a dictionary of {filepath: content_string or None for binary}."""

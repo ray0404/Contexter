@@ -9,7 +9,7 @@ import sys
 from xml.sax.saxutils import escape
 from contexter_utils import (
    DEFAULT_EXCLUDE_PATTERNS, safe_read_text, generate_file_tree, get_language_from_path,
-   estimate_token_count, scan_for_secrets, compress_code, get_matcher
+   estimate_token_count, scan_for_secrets, compress_code, get_matcher, generate_file_tree_from_nodes
 )
 
 def fetch_remote_repo(remote_url, quiet=False):
@@ -59,14 +59,19 @@ def process_path_for_xml(path, outfile, exclude_patterns, processed_files, args,
    if os.path.isdir(norm_path):
        if not args.quiet:
            print(f"📂 Processing directory: {norm_path}", file=sys.stderr)
-       is_top_level = len(processed_files) == 1
-       if is_top_level:
-           tree = generate_file_tree(norm_path, exclude_patterns, matcher)
-           outfile.write(f"  <directory_structure>\n{escape(tree)}\n  </directory_structure>\n")
 
+       nodes = []
        for root, dirs, files in os.walk(norm_path, topdown=True):
            dirs[:] = sorted([d for d in dirs if not matcher(d)])
            files = sorted([f for f in files if not matcher(f)])
+           nodes.append((root, list(dirs), list(files)))
+
+       is_top_level = len(processed_files) == 1
+       if is_top_level:
+           tree = generate_file_tree_from_nodes(norm_path, nodes)
+           outfile.write(f"  <directory_structure>\n{escape(tree)}\n  </directory_structure>\n")
+
+       for root, dirs, files in nodes:
            for filename in files:
                file_path = os.path.join(root, filename)
                process_path_for_xml(file_path, outfile, exclude_patterns, processed_files, args, stats, matcher, base_path)
@@ -107,14 +112,19 @@ def process_path_for_md(path, outfile, exclude_patterns, processed_files, args, 
    if os.path.isdir(norm_path):
        if not args.quiet:
            print(f"📂 Processing directory: {norm_path}", file=sys.stderr)
-       is_top_level = len(processed_files) == 1
-       if is_top_level:
-           tree = generate_file_tree(norm_path, exclude_patterns, matcher)
-           outfile.write(f"--- DIRECTORY STRUCTURE: {os.path.basename(norm_path)} ---\n\n````\n{tree}\n````\n\n")
 
+       nodes = []
        for root, dirs, files in os.walk(norm_path, topdown=True):
            dirs[:] = sorted([d for d in dirs if not matcher(d)])
            files = sorted([f for f in files if not matcher(f)])
+           nodes.append((root, list(dirs), list(files)))
+
+       is_top_level = len(processed_files) == 1
+       if is_top_level:
+           tree = generate_file_tree_from_nodes(norm_path, nodes)
+           outfile.write(f"--- DIRECTORY STRUCTURE: {os.path.basename(norm_path)} ---\n\n````\n{tree}\n````\n\n")
+
+       for root, dirs, files in nodes:
            for filename in files:
                file_path = os.path.join(root, filename)
                process_path_for_md(file_path, outfile, exclude_patterns, processed_files, args, stats, matcher, base_path)
