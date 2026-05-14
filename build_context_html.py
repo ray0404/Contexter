@@ -28,19 +28,16 @@ def main():
 
        if os.path.isdir(norm_path):
            print(f"📂 Processing directory: {norm_path}")
-           tree_content += generate_file_tree(norm_path, exclude_patterns, is_excluded) + "\n\n"
-           for root, dirs, files in os.walk(norm_path, topdown=True):
-               dirs[:] = sorted([d for d in dirs if not is_excluded(d)])
-               for filename in sorted(files):
-                   if is_excluded(filename): continue
-                   file_path = os.path.join(root, filename)
-                   is_bin, content = safe_read_text(file_path)
-                   if is_bin:
-                       print(f"⚫ Skipping (binary): {file_path}")
-                       files_to_include[file_path] = None
-                   else:
-                       files_to_include[file_path] = content
-                       print(f"✅ Processed: {file_path}")
+           tree, collected_files = generate_file_tree(norm_path, exclude_patterns, is_excluded, with_files=True)
+           tree_content += tree + "\n\n"
+           for file_path in collected_files:
+               is_bin, content = safe_read_text(file_path)
+               if is_bin:
+                   print(f"⚫ Skipping (binary): {file_path}")
+                   files_to_include[file_path] = None
+               else:
+                   files_to_include[file_path] = content
+                   print(f"✅ Processed: {file_path}")
        elif os.path.isfile(norm_path):
             # Logic to handle single files, similar to directory walk
            is_bin, content = safe_read_text(norm_path)
