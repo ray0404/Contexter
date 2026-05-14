@@ -143,17 +143,22 @@ def _check_binary_and_read(file_path, read_full=False, encoding='utf-8', errors=
    except (IOError, UnicodeDecodeError):
        return True, None
 
-def generate_file_tree(start_path, exclude_patterns, is_excluded=None):
-   """Generates a string representation of the file tree."""
+def generate_file_tree(start_path, exclude_patterns, is_excluded=None, with_files=False):
+   """Generates a string representation of the file tree. If with_files is True, returns (tree_string, [file_paths])."""
    # Normalize start_path to ensure consistent trailing slash behavior
    start_path = os.path.normpath(start_path)
    if is_excluded is None:
        is_excluded = get_matcher(exclude_patterns)
    tree_lines = []
+   collected_files = []
    for root, dirs, files in os.walk(start_path, topdown=True):
        # Exclude directories and files based on patterns
        dirs[:] = sorted([d for d in dirs if not is_excluded(d)])
        files = sorted([f for f in files if not is_excluded(f)])
+
+       if with_files:
+           for f in files:
+               collected_files.append(os.path.join(root, f))
 
        relative_root = os.path.relpath(root, start_path)
        if relative_root == ".":
@@ -169,7 +174,10 @@ def generate_file_tree(start_path, exclude_patterns, is_excluded=None):
        for i, f in enumerate(files):
            tree_lines.append(f"{sub_indent}├── {f}")
 
-   return f"{os.path.basename(start_path)}/\n" + "\n".join(tree_lines)
+   tree_str = f"{os.path.basename(start_path)}/\n" + "\n".join(tree_lines)
+   if with_files:
+       return tree_str, collected_files
+   return tree_str
 
 
 # --- Parsing Utilities ---

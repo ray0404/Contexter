@@ -61,15 +61,17 @@ def process_path_for_xml(path, outfile, exclude_patterns, processed_files, args,
            print(f"📂 Processing directory: {norm_path}", file=sys.stderr)
        is_top_level = len(processed_files) == 1
        if is_top_level:
-           tree = generate_file_tree(norm_path, exclude_patterns, matcher)
+           tree, collected_files = generate_file_tree(norm_path, exclude_patterns, matcher, with_files=True)
            outfile.write(f"  <directory_structure>\n{escape(tree)}\n  </directory_structure>\n")
-
-       for root, dirs, files in os.walk(norm_path, topdown=True):
-           dirs[:] = sorted([d for d in dirs if not matcher(d)])
-           files = sorted([f for f in files if not matcher(f)])
-           for filename in files:
-               file_path = os.path.join(root, filename)
+           for file_path in collected_files:
                process_path_for_xml(file_path, outfile, exclude_patterns, processed_files, args, stats, matcher, base_path)
+       else:
+           for root, dirs, files in os.walk(norm_path, topdown=True):
+               dirs[:] = sorted([d for d in dirs if not matcher(d)])
+               files = sorted([f for f in files if not matcher(f)])
+               for filename in files:
+                   file_path = os.path.join(root, filename)
+                   process_path_for_xml(file_path, outfile, exclude_patterns, processed_files, args, stats, matcher, base_path)
 
    elif os.path.isfile(norm_path):
        display_path = os.path.relpath(norm_path, base_path) if base_path else norm_path
@@ -109,15 +111,17 @@ def process_path_for_md(path, outfile, exclude_patterns, processed_files, args, 
            print(f"📂 Processing directory: {norm_path}", file=sys.stderr)
        is_top_level = len(processed_files) == 1
        if is_top_level:
-           tree = generate_file_tree(norm_path, exclude_patterns, matcher)
+           tree, collected_files = generate_file_tree(norm_path, exclude_patterns, matcher, with_files=True)
            outfile.write(f"--- DIRECTORY STRUCTURE: {os.path.basename(norm_path)} ---\n\n````\n{tree}\n````\n\n")
-
-       for root, dirs, files in os.walk(norm_path, topdown=True):
-           dirs[:] = sorted([d for d in dirs if not matcher(d)])
-           files = sorted([f for f in files if not matcher(f)])
-           for filename in files:
-               file_path = os.path.join(root, filename)
+           for file_path in collected_files:
                process_path_for_md(file_path, outfile, exclude_patterns, processed_files, args, stats, matcher, base_path)
+       else:
+           for root, dirs, files in os.walk(norm_path, topdown=True):
+               dirs[:] = sorted([d for d in dirs if not matcher(d)])
+               files = sorted([f for f in files if not matcher(f)])
+               for filename in files:
+                   file_path = os.path.join(root, filename)
+                   process_path_for_md(file_path, outfile, exclude_patterns, processed_files, args, stats, matcher, base_path)
 
    elif os.path.isfile(norm_path):
        display_path = os.path.relpath(norm_path, base_path) if base_path else norm_path
