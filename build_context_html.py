@@ -2,7 +2,7 @@
 import argparse
 import os
 from contexter_utils import (
-   DEFAULT_EXCLUDE_PATTERNS, safe_read_text, generate_file_tree, rebuild_html_constructor, get_matcher
+   DEFAULT_EXCLUDE_PATTERNS, safe_read_text, rebuild_html_constructor, get_matcher
 )
 
 def main():
@@ -28,11 +28,28 @@ def main():
 
        if os.path.isdir(norm_path):
            print(f"📂 Processing directory: {norm_path}")
-           tree_content += generate_file_tree(norm_path, exclude_patterns, is_excluded) + "\n\n"
+
+           tree_lines = [f"{os.path.basename(norm_path)}/"]
+
            for root, dirs, files in os.walk(norm_path, topdown=True):
                dirs[:] = sorted([d for d in dirs if not is_excluded(d)])
-               for filename in sorted(files):
+
+               relative_root = os.path.relpath(root, norm_path)
+               if relative_root == ".":
+                   level = 0
+               else:
+                   level = relative_root.count(os.sep) + 1
+
+               indent = '│   ' * (level - 1)
+               if level > 0:
+                   tree_lines.append(f"{indent}├── {os.path.basename(root)}/")
+
+               sub_indent = '│   ' * level
+
+               files = sorted(files)
+               for filename in files:
                    if is_excluded(filename): continue
+                   tree_lines.append(f"{sub_indent}├── {filename}")
                    file_path = os.path.join(root, filename)
                    is_bin, content = safe_read_text(file_path)
                    if is_bin:
@@ -41,6 +58,7 @@ def main():
                    else:
                        files_to_include[file_path] = content
                        print(f"✅ Processed: {file_path}")
+           tree_content += "\n".join(tree_lines) + "\n\n"
        elif os.path.isfile(norm_path):
             # Logic to handle single files, similar to directory walk
            is_bin, content = safe_read_text(norm_path)
