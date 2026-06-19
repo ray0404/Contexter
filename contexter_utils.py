@@ -16,6 +16,7 @@ import re
 import html
 import ast
 import xml.etree.ElementTree as ET
+import functools
 
 # --- Constants ---
 DEFAULT_EXCLUDE_PATTERNS = [
@@ -103,14 +104,22 @@ def compress_code(content, file_path):
 
 # --- File System Utilities ---
 
+@functools.lru_cache(maxsize=128)
+def _get_matcher_regex(patterns_tuple):
+    if not patterns_tuple:
+        return None
+    # Use normcase on patterns to match fnmatch behavior
+    normalized_patterns = [os.path.normcase(p) for p in patterns_tuple]
+    return re.compile('|'.join(fnmatch.translate(p) for p in normalized_patterns))
+
 def get_matcher(patterns):
-   """Pre-compiles a list of glob patterns into a single regex for performance."""
-   if not patterns:
-       return lambda name: False
-   # Use normcase on patterns to match fnmatch behavior
-   normalized_patterns = [os.path.normcase(p) for p in patterns]
-   combined_regex = re.compile('|'.join(fnmatch.translate(p) for p in normalized_patterns))
-   return lambda name: bool(combined_regex.match(os.path.normcase(str(name))))
+    """Pre-compiles a list of glob patterns into a single regex for performance."""
+    if not patterns:
+        return lambda name: False
+    combined_regex = _get_matcher_regex(tuple(patterns))
+    if not combined_regex:
+        return lambda name: False
+    return lambda name: bool(combined_regex.match(os.path.normcase(str(name))))
 
 def is_binary(file_path):
    """Checks if a file is binary using MIME types and a content heuristic."""
